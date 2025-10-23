@@ -169,8 +169,45 @@ export default function LandingPage() {
               </div>
 
               {error && (
-                <div className="bg-red-950/50 border border-red-900/50 text-red-300 px-4 py-3 rounded-lg text-sm">
-                  {error}
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                  <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-red-900/50 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+                    <div className="text-center space-y-4">
+                      <h3 className="text-xl font-bold text-red-400">Invalid or expired activation key</h3>
+                      <p className="text-slate-300 text-sm">To Get Correct Activation Key Contract Admin Now</p>
+
+                      <a
+                        href="https://t.me/AMTRADER999"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="relative group inline-block w-full mt-6"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300 animate-pulse"></div>
+                        <button className="relative w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-blue-500/50">
+                          <span>Contract Admin Now</span>
+                          <svg
+                            className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13 7l5 5m0 0l-5 5m5-5H6"
+                            />
+                          </svg>
+                        </button>
+                      </a>
+
+                      <button
+                        onClick={() => setError("")}
+                        className="w-full text-slate-400 hover:text-slate-300 text-sm py-2 transition-colors"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
