@@ -28,6 +28,7 @@ export default function SignalDashboard() {
   const [signals, setSignals] = useState<Signal[]>([])
   const [signalType, setSignalType] = useState<"live" | "future" | null>(null)
   const [marketCooldowns, setMarketCooldowns] = useState<Record<string, Record<"live" | "future", number>>>({})
+  const [liveCooldownsOnly, setLiveCooldownsOnly] = useState<Record<string, number>>({})
   const [view, setView] = useState<"generate" | "history">("generate")
   const [signalHistory, setSignalHistory] = useState<SignalEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,6 +68,11 @@ export default function SignalDashboard() {
             },
           }))
 
+          setLiveCooldownsOnly((prev) => ({
+            ...prev,
+            [selectedPair]: liveRemainingSeconds,
+          }))
+
           if (!cooldownIntervalsRef.current[selectedPair]) {
             cooldownIntervalsRef.current[selectedPair] = { live: undefined as any, future: undefined as any }
           }
@@ -80,6 +86,11 @@ export default function SignalDashboard() {
             let countdown = liveRemainingSeconds
             const interval = setInterval(() => {
               countdown--
+              setLiveCooldownsOnly((prev) => ({
+                ...prev,
+                [selectedPair]: Math.max(0, countdown),
+              }))
+
               setMarketCooldowns((prev) => ({
                 ...prev,
                 [selectedPair]: {
@@ -106,7 +117,7 @@ export default function SignalDashboard() {
             cooldownIntervalsRef.current[selectedPair].live = interval
           }
 
-          // Future signal cooldown
+          // Future signal cooldown - use separate state update to prevent interference
           if (futureRemainingSeconds > 0) {
             if (cooldownIntervalsRef.current[selectedPair].future) {
               clearInterval(cooldownIntervalsRef.current[selectedPair].future)
@@ -118,7 +129,7 @@ export default function SignalDashboard() {
               setMarketCooldowns((prev) => ({
                 ...prev,
                 [selectedPair]: {
-                  ...prev[selectedPair],
+                  live: prev[selectedPair]?.live || 0,
                   future: Math.max(0, countdown),
                 },
               }))
@@ -334,6 +345,13 @@ export default function SignalDashboard() {
       let countdown = Math.ceil(cooldownMs / 1000)
       const interval = setInterval(() => {
         countdown--
+        if (signalType === "live") {
+          setLiveCooldownsOnly((prev) => ({
+            ...prev,
+            [selectedPair]: Math.max(0, countdown),
+          }))
+        }
+
         setMarketCooldowns((prev) => ({
           ...prev,
           [selectedPair]: {
