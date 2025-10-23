@@ -20,6 +20,7 @@ export default function LandingPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [isInvalidKeyError, setIsInvalidKeyError] = useState(false)
 
   useEffect(() => {
     const checkExistingActivation = () => {
@@ -34,14 +35,30 @@ export default function LandingPage() {
     checkExistingActivation()
   }, [router])
 
+  const handleTelegramChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value
+
+    // Remove all @ symbols first
+    value = value.replace(/@/g, "")
+
+    // Add @ at the beginning if user typed something
+    if (value.length > 0) {
+      value = "@" + value
+    }
+
+    setTelegram(value)
+  }
+
   const handleActivate = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setIsInvalidKeyError(false)
     setLoading(true)
 
     // Validate inputs
     if (!name.trim() || !telegram.trim() || !activationKey.trim()) {
       setError("All fields are required")
+      setIsInvalidKeyError(false)
       setLoading(false)
       return
     }
@@ -51,6 +68,7 @@ export default function LandingPage() {
 
       if (!validKey) {
         setError("Invalid or expired activation key")
+        setIsInvalidKeyError(true)
         setLoading(false)
         return
       }
@@ -58,6 +76,7 @@ export default function LandingPage() {
       const existingUser = await getUserByTelegram(telegram)
       if (existingUser) {
         setError("This Telegram account is already registered")
+        setIsInvalidKeyError(false)
         setLoading(false)
         return
       }
@@ -91,6 +110,7 @@ export default function LandingPage() {
     } catch (err) {
       console.error("[v0] Activation error:", err)
       setError("Activation failed. Please try again.")
+      setIsInvalidKeyError(false)
       setLoading(false)
     }
   }
@@ -137,6 +157,9 @@ export default function LandingPage() {
                     onChange={(e) => setName(e.target.value)}
                     className="bg-slate-950/50 border-blue-900/50 text-white placeholder:text-slate-500"
                   />
+                  {!name.trim() && error === "All fields are required" && (
+                    <p className="text-red-400 text-xs">Required</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -148,9 +171,12 @@ export default function LandingPage() {
                     type="text"
                     placeholder="@username"
                     value={telegram}
-                    onChange={(e) => setTelegram(e.target.value)}
+                    onChange={handleTelegramChange}
                     className="bg-slate-950/50 border-blue-900/50 text-white placeholder:text-slate-500"
                   />
+                  {!telegram.trim() && error === "All fields are required" && (
+                    <p className="text-red-400 text-xs">Required</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -165,10 +191,13 @@ export default function LandingPage() {
                     onChange={(e) => setActivationKey(e.target.value)}
                     className="bg-slate-950/50 border-blue-900/50 text-white placeholder:text-slate-500"
                   />
+                  {!activationKey.trim() && error === "All fields are required" && (
+                    <p className="text-red-400 text-xs">Required</p>
+                  )}
                 </div>
               </div>
 
-              {error && (
+              {error && isInvalidKeyError && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                   <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-red-900/50 rounded-2xl p-8 max-w-md w-full shadow-2xl">
                     <div className="text-center space-y-4">
@@ -201,13 +230,22 @@ export default function LandingPage() {
                       </a>
 
                       <button
-                        onClick={() => setError("")}
+                        onClick={() => {
+                          setError("")
+                          setIsInvalidKeyError(false)
+                        }}
                         className="w-full text-slate-400 hover:text-slate-300 text-sm py-2 transition-colors"
                       >
                         Close
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {error && !isInvalidKeyError && (
+                <div className="bg-red-900/20 border border-red-900/50 rounded-lg p-3 text-red-400 text-sm">
+                  {error}
                 </div>
               )}
 
