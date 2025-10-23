@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,7 +19,7 @@ import {
   onActivationKeysChange,
   onUsersChange,
 } from "@/lib/firebase-admin"
-import { Key, Trash2, Plus, Users, Ban, RotateCcw, Search, LogOut } from "lucide-react"
+import { Key, Trash2, Plus, Users, Ban, RotateCcw, Search } from "lucide-react"
 import { parseExpirationString } from "@/lib/expiration-parser"
 
 function calculateTimeRemaining(expiresAt: string): { remaining: string; isExpired: boolean } {
@@ -50,10 +49,6 @@ function calculateTimeRemaining(expiresAt: string): { remaining: string; isExpir
 }
 
 export default function AdminPanel() {
-  const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
-
   const [keys, setKeys] = useState<ActivationKey[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [keyType, setKeyType] = useState<"one-time" | "unlimited" | "user-limit">("one-time")
@@ -77,26 +72,6 @@ export default function AdminPanel() {
     action: () => Promise<void>
     isLoading?: boolean
   } | null>(null)
-
-  useEffect(() => {
-    const checkAuth = () => {
-      const isAuth = localStorage.getItem("adminAuthenticated") === "true"
-      setIsAuthenticated(isAuth)
-      setIsCheckingAuth(false)
-
-      if (!isAuth) {
-        router.push("/secretxam/login")
-      }
-    }
-
-    checkAuth()
-  }, [router])
-
-  const handleLogout = () => {
-    localStorage.removeItem("adminAuthenticated")
-    localStorage.removeItem("adminLoginTime")
-    router.push("/secretxam/login")
-  }
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -360,18 +335,6 @@ export default function AdminPanel() {
     )
   }
 
-  if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
-        <div className="text-white text-xl">Checking authentication...</div>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return null
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
@@ -383,16 +346,10 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 p-4">
       <div className="container mx-auto max-w-6xl py-8">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Admin Panel</h1>
-            <p className="text-blue-300">Manage activation keys and users for AM Signal Software</p>
-            <p className="text-sm text-emerald-400 mt-2">Connected to Firebase Realtime Database</p>
-          </div>
-          <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white" title="Logout">
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Admin Panel</h1>
+          <p className="text-blue-300">Manage activation keys and users for AM Signal Software</p>
+          <p className="text-sm text-emerald-400 mt-2">Connected to Firebase Realtime Database</p>
         </div>
 
         {/* Tabs */}
@@ -674,12 +631,12 @@ export default function AdminPanel() {
                                     {key.key}
                                   </code>
                                   <Badge
-                                    className={`text-xs font-medium px-2 py-1 rounded ${
+                                    className={`text-xs font-medium ${
                                       key.type === "one-time"
-                                        ? "bg-yellow-900/50 text-yellow-200"
+                                        ? "bg-yellow-600 text-yellow-100"
                                         : key.type === "unlimited"
-                                          ? "bg-green-900/50 text-green-200"
-                                          : "bg-red-900/50 text-red-200"
+                                          ? "bg-green-600 text-green-100"
+                                          : "bg-red-600 text-red-100"
                                     }`}
                                   >
                                     {key.type === "one-time"
@@ -690,6 +647,30 @@ export default function AdminPanel() {
                                   </Badge>
                                 </div>
                                 <div className="text-sm text-blue-300">{timeInfo?.remaining || "No expiration"}</div>
+                                {key.type === "user-limit" && key.maxUsers && (
+                                  <div className="text-sm text-blue-300">
+                                    Users: {key.usedBy?.length || 0} / {key.maxUsers}
+                                  </div>
+                                )}
+                                <div className="text-sm text-blue-300 mt-2">
+                                  {key.usedBy && key.usedBy.length > 0 ? (
+                                    <div>
+                                      <p className="font-semibold text-blue-200">Used By:</p>
+                                      <div className="flex flex-wrap gap-2 mt-1">
+                                        {key.usedBy.map((username, idx) => (
+                                          <Badge
+                                            key={idx}
+                                            className="bg-emerald-900/50 text-emerald-200 border border-emerald-700"
+                                          >
+                                            @{username}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-slate-400">Not used yet</p>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex flex-col gap-2">
                                 <Button
@@ -712,7 +693,171 @@ export default function AdminPanel() {
             </div>
           </div>
         )}
+
+        {activeTab === "search" && (
+          <div className="space-y-4">
+            <Card className="bg-slate-900/80 border-blue-900/50 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  Search Users
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-blue-200">Search By</Label>
+                  <Select value={searchType} onValueChange={(v) => setSearchType(v as "telegram" | "key")}>
+                    <SelectTrigger className="bg-slate-950/50 border-blue-900/50 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-blue-900/50">
+                      <SelectItem value="telegram" className="text-white">
+                        Telegram Username
+                      </SelectItem>
+                      <SelectItem value="key" className="text-white">
+                        Activation Key
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-blue-200">
+                    {searchType === "telegram" ? "Telegram Username" : "Activation Key"}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder={searchType === "telegram" ? "Enter telegram username" : "Enter activation key"}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                      className="bg-slate-950/50 border-blue-900/50 text-white placeholder:text-slate-500"
+                    />
+                    <Button onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <Search className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Bulk actions for key search */}
+                {searchType === "key" && searchResults.length > 0 && (
+                  <div className="space-y-2 pt-4 border-t border-blue-900/50">
+                    <p className="text-sm text-blue-300 font-semibold">Bulk Actions ({searchResults.length} users)</p>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button onClick={handleBanAllByKey} className="bg-yellow-600 hover:bg-yellow-700 text-white">
+                        <Ban className="w-4 h-4 mr-2" />
+                        Ban All
+                      </Button>
+                      <Button onClick={handleUnbanAllByKey} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Unban All
+                      </Button>
+                      <Button onClick={handleDeleteAllByKey} className="bg-red-600 hover:bg-red-700 text-white">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete All
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Search Results */}
+            {searchResults.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-white font-semibold">
+                  Results ({searchResults.length} {searchResults.length === 1 ? "user" : "users"})
+                </h3>
+                {searchResults.map((user) => (
+                  <Card key={user.id} className="bg-slate-900/80 border-blue-900/50 backdrop-blur">
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-white font-semibold">{user.name}</h3>
+                            {user.isBanned && <Badge className="bg-red-600 text-white">Banned</Badge>}
+                          </div>
+                          <div className="text-sm text-blue-300 space-y-1">
+                            <p>Telegram: @{user.telegram}</p>
+                            <p>Key: {user.activationKey}</p>
+                            <p>Activated: {new Date(user.activatedAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {user.isBanned ? (
+                            <Button
+                              size="sm"
+                              onClick={() => handleUnbanUser(user.id)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                              title="Unban"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => handleBanUser(user.id)}
+                              className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                              title="Ban"
+                            >
+                              <Ban className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {searchQuery && searchResults.length === 0 && (
+              <Card className="bg-slate-900/80 border-blue-900/50 backdrop-blur">
+                <CardContent className="py-8 text-center text-blue-300">No users found</CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="bg-slate-900 border-blue-900/50 max-w-md w-full mx-4">
+            <CardHeader>
+              <CardTitle className="text-white">{confirmDialog.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-blue-300">{confirmDialog.description}</p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  onClick={() => setConfirmDialog(null)}
+                  className="bg-slate-700 hover:bg-slate-600 text-white"
+                  disabled={confirmDialog.isLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmAction}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  disabled={confirmDialog.isLoading}
+                >
+                  {confirmDialog.isLoading ? "Processing..." : "Confirm"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
